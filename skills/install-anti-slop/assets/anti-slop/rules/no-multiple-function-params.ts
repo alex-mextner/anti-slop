@@ -10,13 +10,33 @@ type ParameterOwner =
   | ESTree.TSFunctionType
   | ESTree.TSMethodSignature;
 
+type LooseNode = { type?: string; name?: string; typeAnnotation?: LooseNode; elementTypes?: LooseNode[] };
+
+function tupleRestArity(parameter: ESTree.ParamPattern): number | null {
+  const node = parameter as unknown as LooseNode;
+  if (node.type !== "RestElement") return null;
+  const annotation = node.typeAnnotation?.typeAnnotation;
+  if (annotation?.type !== "TSTupleType" || !Array.isArray(annotation.elementTypes)) return null;
+  return annotation.elementTypes.length;
+}
+
+function positionalArity(params: readonly ESTree.ParamPattern[]): number {
+  let count = 0;
+  for (const parameter of params) {
+    const node = parameter as unknown as LooseNode;
+    if (node.type === "Identifier" && node.name === "this") continue;
+    count += tupleRestArity(parameter) ?? 1;
+  }
+  return count;
+}
+
 /** Encourage named request/command objects instead of long positional function signatures. */
 export const noMultipleFunctionParamsRule = defineRule({
   meta: {
     type: "suggestion",
     docs: {
       description:
-        "Disallow functions with more than one parameter; use a named parameter object for multi-value input contracts.",
+        "Disallow functions with more than one caller-visible positional parameter; use a named parameter object for multi-value input contracts.",
     },
     messages: {
       multiple:
@@ -25,8 +45,9 @@ export const noMultipleFunctionParamsRule = defineRule({
   },
   create(context) {
     const check = (node: ParameterOwner) => {
-      if (node.params.length <= 1) return;
-      context.report({ node, messageId: "multiple", data: { count: String(node.params.length) } });
+      const count = positionalArity(node.params);
+      if (count <= 1) return;
+      context.report({ node, messageId: "multiple", data: { count: String(count) } });
     };
     return {
       ArrowFunctionExpression: check,
