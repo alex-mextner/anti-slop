@@ -8,9 +8,11 @@ tester.run("anti-slop/no-optional-function-parameters", noOptionalFunctionParame
     "function f(value: string | undefined): void {}",
     "function f(input: { value?: string }): void {}",
     "function f(value = 'x'): void {}",
+    "type F = (...args: [value: string]) => void;",
   ],
   invalid: [
     { code: "function f(value?: string): void {}", errors: [{ messageId: "optional" }] },
     { code: "type F = (value?: string) => void;", errors: [{ messageId: "optional" }] },
+    { code: "type F = (...args: [value?: string]) => void;", errors: [{ messageId: "optional" }] },
   ],
 });
