@@ -4,7 +4,9 @@ import { noChainedTypeAssertionsRule } from "./rules/no-chained-type-assertions.
 import { noConditionalEmptyObjectSpreadRule } from "./rules/no-conditional-empty-object-spread.ts";
 import { noKnownValueWideningRule } from "./rules/no-known-value-widening.ts";
 import { noModuleMockingRule } from "./rules/no-module-mocking.ts";
+import { noMultipleFunctionParamsRule } from "./rules/no-multiple-function-params.ts";
 import { noObjectParametersRule } from "./rules/no-object-parameters.ts";
+import { noOptionalFunctionParametersRule } from "./rules/no-optional-function-parameters.ts";
 import { noReflectApplyRule } from "./rules/no-reflect-apply.ts";
 import { noReflectGetRule } from "./rules/no-reflect-get.ts";
 import { noRuntimeTypeofRule } from "./rules/no-runtime-typeof.ts";
@@ -24,7 +26,9 @@ const antiSlopPlugin = definePlugin({
 		"no-conditional-empty-object-spread": noConditionalEmptyObjectSpreadRule,
 		"no-known-value-widening": noKnownValueWideningRule,
 		"no-module-mocking": noModuleMockingRule,
+		"no-multiple-function-params": noMultipleFunctionParamsRule,
 		"no-object-parameters": noObjectParametersRule,
+		"no-optional-function-parameters": noOptionalFunctionParametersRule,
 		"no-reflect-apply": noReflectApplyRule,
 		"no-reflect-get": noReflectGetRule,
 		"no-runtime-typeof": noRuntimeTypeofRule,
