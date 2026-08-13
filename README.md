@@ -57,21 +57,23 @@ The same `jsPlugins` entry and rules work under `lint` in a Vite+ config.
 
 ## Rules
 
-- `no-chained-type-assertions` — rejects nested type assertions that fabricate evidence.
-- `no-conditional-empty-object-spread` — rejects conditional spreads that use `{}` to omit fields.
-- `no-known-value-widening` — rejects explicit broad target types that discard known value evidence.
-- `no-module-mocking` — rejects Vitest and Jest module mocks in favor of real dependency seams.
-- `no-object-parameters` — rejects the broad `object` type on function inputs.
-- `no-reflect-apply` — rejects `Reflect.apply` in favor of typed function calls.
-- `no-reflect-get` — rejects `Reflect.get` in favor of typed property access or boundary parsing.
-- `no-runtime-typeof` — requires boundary parsing instead of ad hoc `typeof` narrowing.
-- `no-shape-in-symbol-names` — rejects `shape` in symbol names.
-- `no-unknown-parameters` — rejects `unknown` inputs except the explicit `cause` convention.
-- `no-unknown-returns` — rejects function contracts that return `unknown` or `Promise<unknown>`.
-- `no-unknown-type-aliases` — rejects aliases that merely conceal `unknown`.
-- `no-unsafe-dictionary-type` — rejects dictionary value contracts based on `unknown`, `any`, `object`, `{}`, and semantic equivalents.
-- `no-widen-then-assert` — rejects local flows that widen known values and later assert them back.
-- `require-safety-comment-for-type-assertion` — requires each non-const assertion to document its checked invariant.
+Each rule links to a short guide with rationale, replacement patterns, and semantic caveats.
+
+- [`no-chained-type-assertions`](docs/rules/no-chained-type-assertions.md) — rejects nested type assertions that fabricate evidence. **Prefer:** keep the original precise type, or parse untrusted input at its boundary before narrowing it.
+- [`no-conditional-empty-object-spread`](docs/rules/no-conditional-empty-object-spread.md) — rejects conditional spreads that use `{}` to omit fields. **Prefer:** build the object explicitly and add the property only when present.
+- [`no-known-value-widening`](docs/rules/no-known-value-widening.md) — rejects explicit broad target types that discard known value evidence. **Prefer:** preserve inference, use `satisfies`, or use a named owner contract.
+- [`no-module-mocking`](docs/rules/no-module-mocking.md) — rejects Vitest and Jest module mocks. **Prefer:** dependency injection through a real interface, service layer, adapter, or faithful test implementation.
+- [`no-object-parameters`](docs/rules/no-object-parameters.md) — rejects the broad `object` type on function inputs. **Prefer:** accept a named owner type and parse external input at the boundary.
+- [`no-reflect-apply`](docs/rules/no-reflect-apply.md) — rejects `Reflect.apply`. **Prefer:** typed function calls or a named interface for dynamic dispatch.
+- [`no-reflect-get`](docs/rules/no-reflect-get.md) — rejects `Reflect.get`. **Prefer:** typed property access, or parse dynamic input into a named domain type first.
+- [`no-runtime-typeof`](docs/rules/no-runtime-typeof.md) — rejects ad hoc `typeof` narrowing. **Prefer:** decode external values at the I/O boundary, then branch on domain values.
+- [`no-shape-in-symbol-names`](docs/rules/no-shape-in-symbol-names.md) — rejects `shape` in symbol names. **Prefer:** name symbols for their domain role or ownership.
+- [`no-unknown-parameters`](docs/rules/no-unknown-parameters.md) — rejects `unknown` inputs except the explicit `cause` convention. **Prefer:** accept a named domain type after the expected schema/parser has run at the boundary.
+- [`no-unknown-returns`](docs/rules/no-unknown-returns.md) — rejects function contracts that return `unknown` or `Promise<unknown>`. **Prefer:** parse at the boundary and return a named domain type.
+- [`no-unknown-type-aliases`](docs/rules/no-unknown-type-aliases.md) — rejects aliases that merely conceal `unknown`. **Prefer:** keep `unknown` visible at an allowed parsing boundary, then use the parsed owner type.
+- [`no-unsafe-dictionary-type`](docs/rules/no-unsafe-dictionary-type.md) — rejects dictionary value contracts based on `unknown`, `any`, `object`, `{}`, and semantic equivalents. **Prefer:** an owner/schema-derived value type and parsed external payloads.
+- [`no-widen-then-assert`](docs/rules/no-widen-then-assert.md) — rejects local flows that widen known values and later assert them back. **Prefer:** keep the precise type from initialization through use and parse boundary input once.
+- [`require-safety-comment-for-type-assertion`](docs/rules/require-safety-comment-for-type-assertion.md) — requires each non-const assertion to document its checked invariant. **Prefer:** remove the assertion when possible; otherwise state the specific `SAFETY:` invariant immediately before it.
 
 ## Violation examples
 
