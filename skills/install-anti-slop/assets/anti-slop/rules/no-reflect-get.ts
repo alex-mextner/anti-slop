@@ -12,7 +12,7 @@ export const noReflectGetRule = defineRule({
     },
     messages: {
       reflectGet:
-        "Replace `Reflect.get` with typed property access. Parse dynamic input into a named domain type before reading it.",
+        "Replace `Reflect.get` with typed property access. Parse dynamic input into a named domain type before reading it. See: docs/rules/no-reflect-get.md",
     },
   },
   create(context) {

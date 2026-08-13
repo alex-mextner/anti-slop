@@ -75,7 +75,7 @@ export const noModuleMockingRule = defineRule({
     },
     messages: {
       moduleMock:
-        "Replace module mocking with dependency injection through a real interface, service layer, or faithful test implementation.",
+        "Replace module mocking with dependency injection through a real interface, service layer, adapter, or faithful test implementation. See: docs/rules/no-module-mocking.md",
     },
   },
   create(context) {
