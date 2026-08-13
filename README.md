@@ -22,7 +22,9 @@ Manual installation is still possible: copy `src/` into the target repository (f
 - [`no-conditional-empty-object-spread`](docs/rules/no-conditional-empty-object-spread.md) — rejects conditional spreads that use `{}` to omit fields. **Prefer:** build the object explicitly and add the property only when present.
 - [`no-known-value-widening`](docs/rules/no-known-value-widening.md) — rejects explicit broad target types that discard known value evidence. **Prefer:** preserve inference, use `satisfies`, or use a named owner contract.
 - [`no-module-mocking`](docs/rules/no-module-mocking.md) — rejects Vitest and Jest module mocks. **Prefer:** dependency injection through a real interface, service layer, adapter, or faithful test implementation.
+- [`no-multiple-function-params`](docs/rules/no-multiple-function-params.md) — rejects multi-value positional function signatures. **Prefer:** one named request/options object. This is an opt-in API-shape rule, not a universal correctness invariant.
 - [`no-object-parameters`](docs/rules/no-object-parameters.md) — rejects the broad `object` type on function inputs. **Prefer:** accept a named owner type and parse external input at the boundary.
+- [`no-optional-function-parameters`](docs/rules/no-optional-function-parameters.md) — rejects `?` on positional parameters. **Prefer:** optional fields in a named request/options object, or explicit `T | undefined` when positional semantics are required. This rule is opt-in.
 - [`no-reflect-apply`](docs/rules/no-reflect-apply.md) — rejects `Reflect.apply`. **Prefer:** typed function calls or a named interface for dynamic dispatch.
 - [`no-reflect-get`](docs/rules/no-reflect-get.md) — rejects `Reflect.get`. **Prefer:** typed property access, or parse dynamic input into a named domain type first.
 - [`no-runtime-typeof`](docs/rules/no-runtime-typeof.md) — rejects ad hoc `typeof` narrowing. **Prefer:** decode external values at the I/O boundary, then branch on domain values. This rule is intentionally suitable for opt-in/strict profiles rather than a universal default because small boundary parsers may legitimately use `typeof`.
@@ -55,6 +57,8 @@ The fork deliberately ships more rules than the default profile enables. A sensi
 | `no-runtime-typeof` | off | boundary parsers may legitimately use `typeof` |
 | `no-conditional-empty-object-spread` | off | readability/style choice rather than a correctness invariant |
 | `no-shape-in-symbol-names` | off | repository-specific naming policy |
+| `no-multiple-function-params` | off | API-shape preference with legitimate callback/low-level exceptions |
+| `no-optional-function-parameters` | off | API-shape preference with legitimate framework/external-signature exceptions |
 
 Projects can enable all rules and then disable/downgrade selected rules, or start from the baseline and opt into stricter groups. Rig is the source of truth for those choices.
 
