@@ -11,10 +11,22 @@ type ParameterOwner =
   | ESTree.TSFunctionType
   | ESTree.TSMethodSignature;
 
+type LooseNode = { type?: string; optional?: boolean; typeAnnotation?: LooseNode; elementTypes?: LooseNode[] };
+
+function tupleRestContainsOptional(parameter: Parameter): boolean {
+  const node = parameter as unknown as LooseNode;
+  if (node.type !== "RestElement") return false;
+  const annotation = node.typeAnnotation?.typeAnnotation;
+  if (annotation?.type !== "TSTupleType" || !Array.isArray(annotation.elementTypes)) return false;
+  return annotation.elementTypes.some((element) => element.type === "TSOptionalType" || element.optional === true);
+}
+
 function optionalParameter(parameter: Parameter): ESTree.Node | null {
   if (parameter.type === "TSParameterProperty") return optionalParameter(parameter.parameter);
   if (parameter.type === "AssignmentPattern") return null;
-  if (parameter.type === "RestElement") return parameter.optional ? parameter : null;
+  if (parameter.type === "RestElement") {
+    return parameter.optional || tupleRestContainsOptional(parameter) ? parameter : null;
+  }
   return parameter.optional ? parameter : null;
 }
 
