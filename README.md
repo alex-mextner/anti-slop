@@ -1,63 +1,22 @@
 # anti-slop
 
-[![skills.sh](https://skills.sh/b/dmmulroy/anti-slop)](https://skills.sh/dmmulroy/anti-slop)
-
 Opinionated Oxlint rules that reject low-evidence and low-signal TypeScript and JavaScript patterns.
 
-This project is meant to be vendored, not treated as a fixed npm dependency. Copy the rules into your repository, read them, and change them to match your team's standards. The bundled agent skill handles the initial copy and configuration; after that, the vendored files are yours to maintain and make your own.
+This fork is the Rig/agent-tools anti-slop source. It is meant to be vendored into target repositories rather than consumed as a fixed npm dependency. Rig owns rule selection and severity; the vendored plugin only supplies implementations.
 
-## Install with an agent skill
+## Install
 
-```bash
-npx skills add dmmulroy/anti-slop --skill install-anti-slop
-```
+Rig-managed repositories should enable the anti-slop rule group in `rig.yaml` or the global Rig config. Rig vendors the plugin and renders the resulting Oxlint configuration.
 
-Then ask your coding agent to install or configure anti-slop in the current repository. The skill copies the plugin, installs current Oxlint dependencies, merges the plugin into the existing lint configuration, enables every rule, and validates the result.
+Manual installation is still possible: copy `src/` into the target repository (for example `tools/oxlint/anti-slop/`), install compatible `oxlint` and `@oxlint/plugins`, register the local plugin, and explicitly choose rule severities.
 
-To inspect available skills first:
-
-```bash
-npx skills add dmmulroy/anti-slop --list
-```
-
-## Manual local installation
-
-Copy `src/` into the target repository, for example at `tools/oxlint/anti-slop/`, and install matching current versions of `oxlint` and `@oxlint/plugins`.
-
-Register the copied entry point in `oxlint.config.ts`:
-
-```ts
-import { defineConfig } from "oxlint";
-
-export default defineConfig({
-  jsPlugins: [
-    { name: "anti-slop", specifier: "./tools/oxlint/anti-slop/index.ts" },
-  ],
-  rules: {
-    "anti-slop/no-chained-type-assertions": "error",
-    "anti-slop/no-conditional-empty-object-spread": "error",
-    "anti-slop/no-known-value-widening": "error",
-    "anti-slop/no-module-mocking": "error",
-    "anti-slop/no-object-parameters": "error",
-    "anti-slop/no-reflect-apply": "error",
-    "anti-slop/no-reflect-get": "error",
-    "anti-slop/no-runtime-typeof": "error",
-    "anti-slop/no-shape-in-symbol-names": "error",
-    "anti-slop/no-unknown-parameters": "error",
-    "anti-slop/no-unknown-returns": "error",
-    "anti-slop/no-unknown-type-aliases": "error",
-    "anti-slop/no-unsafe-dictionary-type": "error",
-    "anti-slop/no-widen-then-assert": "error",
-    "anti-slop/require-safety-comment-for-type-assertion": "error"
-  }
-});
-```
-
-The same `jsPlugins` entry and rules work under `lint` in a Vite+ config.
+> [!IMPORTANT]
+> Vendoring anti-slop does **not** imply that every rule is enabled. Rule activation is a policy decision. Rig keeps that decision in configuration so global defaults and per-repository overrides remain visible and reproducible.
 
 ## Rules
 
-Each rule links to a short guide with rationale, replacement patterns, and semantic caveats.
+> [!TIP]
+> Each rule links to a short guide with rationale, replacement patterns, examples, and semantic caveats. Lint diagnostics also include the guide path so a human or coding agent can jump from the error to the full rule without duplicating the whole guide in every message.
 
 - [`no-chained-type-assertions`](docs/rules/no-chained-type-assertions.md) — rejects nested type assertions that fabricate evidence. **Prefer:** keep the original precise type, or parse untrusted input at its boundary before narrowing it.
 - [`no-conditional-empty-object-spread`](docs/rules/no-conditional-empty-object-spread.md) — rejects conditional spreads that use `{}` to omit fields. **Prefer:** build the object explicitly and add the property only when present.
@@ -66,130 +25,38 @@ Each rule links to a short guide with rationale, replacement patterns, and seman
 - [`no-object-parameters`](docs/rules/no-object-parameters.md) — rejects the broad `object` type on function inputs. **Prefer:** accept a named owner type and parse external input at the boundary.
 - [`no-reflect-apply`](docs/rules/no-reflect-apply.md) — rejects `Reflect.apply`. **Prefer:** typed function calls or a named interface for dynamic dispatch.
 - [`no-reflect-get`](docs/rules/no-reflect-get.md) — rejects `Reflect.get`. **Prefer:** typed property access, or parse dynamic input into a named domain type first.
-- [`no-runtime-typeof`](docs/rules/no-runtime-typeof.md) — rejects ad hoc `typeof` narrowing. **Prefer:** decode external values at the I/O boundary, then branch on domain values.
-- [`no-shape-in-symbol-names`](docs/rules/no-shape-in-symbol-names.md) — rejects `shape` in symbol names. **Prefer:** name symbols for their domain role or ownership.
-- [`no-unknown-parameters`](docs/rules/no-unknown-parameters.md) — rejects `unknown` inputs except the explicit `cause` convention. **Prefer:** accept a named domain type after the expected schema/parser has run at the boundary.
+- [`no-runtime-typeof`](docs/rules/no-runtime-typeof.md) — rejects ad hoc `typeof` narrowing. **Prefer:** decode external values at the I/O boundary, then branch on domain values. This rule is intentionally suitable for opt-in/strict profiles rather than a universal default because small boundary parsers may legitimately use `typeof`.
+- [`no-shape-in-symbol-names`](docs/rules/no-shape-in-symbol-names.md) — rejects `shape` in symbol names. **Prefer:** name symbols for their domain role or ownership. This is an opinionated naming rule and is not a universal default.
+- [`no-unknown-parameters`](docs/rules/no-unknown-parameters.md) — rejects `unknown` inputs except the explicit `cause` convention. **Prefer:** accept a named domain type after the expected schema/parser has run at the boundary. Boundary adapters may reasonably keep this rule disabled or downgraded.
 - [`no-unknown-returns`](docs/rules/no-unknown-returns.md) — rejects function contracts that return `unknown` or `Promise<unknown>`. **Prefer:** parse at the boundary and return a named domain type.
 - [`no-unknown-type-aliases`](docs/rules/no-unknown-type-aliases.md) — rejects aliases that merely conceal `unknown`. **Prefer:** keep `unknown` visible at an allowed parsing boundary, then use the parsed owner type.
 - [`no-unsafe-dictionary-type`](docs/rules/no-unsafe-dictionary-type.md) — rejects dictionary value contracts based on `unknown`, `any`, `object`, `{}`, and semantic equivalents. **Prefer:** an owner/schema-derived value type and parsed external payloads.
 - [`no-widen-then-assert`](docs/rules/no-widen-then-assert.md) — rejects local flows that widen known values and later assert them back. **Prefer:** keep the precise type from initialization through use and parse boundary input once.
 - [`require-safety-comment-for-type-assertion`](docs/rules/require-safety-comment-for-type-assertion.md) — requires each non-const assertion to document its checked invariant. **Prefer:** remove the assertion when possible; otherwise state the specific `SAFETY:` invariant immediately before it.
 
-## Violation examples
+## Recommended Rig baseline
 
-Each snippet below is rejected by the named rule.
+The fork deliberately ships more rules than the default profile enables. A sensible baseline is:
 
-### `no-chained-type-assertions`
+| Rule | Default | Rationale |
+| --- | --- | --- |
+| `no-chained-type-assertions` | error | catches assertion laundering |
+| `no-known-value-widening` | error | preserves known type evidence |
+| `no-widen-then-assert` | error | catches evidence loss followed by reconstruction |
+| `no-unsafe-dictionary-type` | error | rejects contracts whose values carry no useful type evidence |
+| `require-safety-comment-for-type-assertion` | error | documents unavoidable assertions |
+| `no-object-parameters` | error | keeps function contracts concrete |
+| `no-unknown-type-aliases` | error | prevents hiding uncertainty behind aliases |
+| `no-unknown-returns` | error | keeps uncertainty at boundaries |
+| `no-reflect-get` | warn | useful smell; dynamic APIs can be legitimate |
+| `no-reflect-apply` | warn | useful smell; dynamic dispatch can be legitimate |
+| `no-module-mocking` | warn | promotes real seams without making every test architecture identical |
+| `no-unknown-parameters` | warn | strong interior-code signal, but boundary adapters exist |
+| `no-runtime-typeof` | off | boundary parsers may legitimately use `typeof` |
+| `no-conditional-empty-object-spread` | off | readability/style choice rather than a correctness invariant |
+| `no-shape-in-symbol-names` | off | repository-specific naming policy |
 
-```ts
-const user = input as object as User;
-```
-
-### `no-conditional-empty-object-spread`
-
-```ts
-const options = {
-  ...(timeout !== undefined ? { timeout } : {}),
-};
-```
-
-### `no-known-value-widening`
-
-```ts
-const handlers: Record<string, Handler> = {
-  start: startHandler,
-};
-```
-
-This discards the known `start` key. Preserve inference or use `satisfies Record<string, Handler>` instead.
-
-### `no-module-mocking`
-
-```ts
-vi.mock("./user-store");
-```
-
-### `no-object-parameters`
-
-```ts
-function save(value: object) {}
-```
-
-### `no-reflect-apply`
-
-```ts
-const value = Reflect.apply(operation, owner, args);
-```
-
-### `no-reflect-get`
-
-```ts
-const value = Reflect.get(owner, key);
-```
-
-### `no-runtime-typeof`
-
-```ts
-if (typeof input === "string") {
-  useName(input);
-}
-```
-
-### `no-shape-in-symbol-names`
-
-```ts
-interface UserShape {
-  id: string;
-}
-```
-
-### `no-unknown-parameters`
-
-```ts
-function handle(input: unknown) {}
-```
-
-### `no-unknown-returns`
-
-```ts
-function loadUser(): unknown {
-  return input;
-}
-```
-
-### `no-unknown-type-aliases`
-
-```ts
-type ExternalValue = unknown;
-```
-
-### `no-unsafe-dictionary-type`
-
-```ts
-type Metadata = Record<string, unknown>;
-type OtherMetadata = { [key: string]: object };
-```
-
-### `no-widen-then-assert`
-
-```ts
-const loaded: User = loadUser();
-const stored: unknown = loaded;
-const user = stored as User;
-```
-
-### `require-safety-comment-for-type-assertion`
-
-```ts
-const userId = value as UserId;
-```
-
-Add a specific justification immediately before a necessary assertion:
-
-```ts
-// SAFETY: parseUserId validated the identifier before branding it.
-const userId = value as UserId;
-```
+Projects can enable all rules and then disable/downgrade selected rules, or start from the baseline and opt into stricter groups. Rig is the source of truth for those choices.
 
 ## Development
 
