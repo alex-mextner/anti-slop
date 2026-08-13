@@ -10,7 +10,7 @@ export const noRuntimeTypeofRule = defineRule({
     },
     messages: {
       runtimeTypeof:
-        "A `typeof` check narrows a representation without establishing its contract. Parse input at its I/O boundary, then branch on the domain value.",
+        "A `typeof` check narrows a representation without establishing its contract. Prefer a boundary parser/decoder, then branch on the domain value. See: docs/rules/no-runtime-typeof.md",
     },
   },
   create(context) {

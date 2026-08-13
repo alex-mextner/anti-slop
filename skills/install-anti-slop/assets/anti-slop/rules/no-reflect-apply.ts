@@ -12,7 +12,7 @@ export const noReflectApplyRule = defineRule({
     },
     messages: {
       reflectApply:
-        "Replace `Reflect.apply` with a typed function call. Model dynamic dispatch behind a named interface.",
+        "Replace `Reflect.apply` with a typed function call. Model genuinely dynamic dispatch behind a named interface. See: docs/rules/no-reflect-apply.md",
     },
   },
   create(context) {
