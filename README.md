@@ -2,65 +2,182 @@
 
 Opinionated Oxlint rules that reject low-evidence and low-signal TypeScript and JavaScript patterns.
 
-This fork is the Rig/agent-tools anti-slop source. It is meant to be vendored into target repositories rather than consumed as a fixed npm dependency. Rig owns rule selection and severity; the vendored plugin only supplies implementations.
+anti-slop is used by three related repositories:
+
+- [Rig](https://github.com/alex-mextner/rig-cli) — declarative repository setup and reconciliation; selects rules, resolves defaults/overrides, and generates the effective Oxlint configuration.
+- [agent-tools](https://github.com/alex-mextner/agent-tools) — reusable coding-agent skills, hooks, CI gates, linter/formatter carriers, and the pinned anti-slop source consumed by Rig.
+- [anti-slop](https://github.com/alex-mextner/anti-slop) — the Oxlint plugin implementations and rule documentation in this repository.
 
 ## Install
 
-Rig-managed repositories should enable the anti-slop rule group in `rig.yaml` or the global Rig config. Rig vendors the plugin and renders the resulting Oxlint configuration.
+There are two supported ways to use anti-slop. **Rig is recommended** when the repository already uses Rig because it keeps the selected policy reproducible across repositories and machines. Direct Oxc setup is a first-class option when you want to manage Oxlint yourself.
 
-Manual installation is still possible: copy `src/` into the target repository (for example `tools/oxlint/anti-slop/`), install compatible `oxlint` and `@oxlint/plugins`, register the local plugin, and explicitly choose rule severities.
+### Option 1 — Rig (recommended for Rig-managed repositories)
 
-> [!IMPORTANT]
-> Vendoring anti-slop does **not** imply that every rule is enabled. Rule activation is a policy decision. Rig keeps that decision in configuration so global defaults and per-repository overrides remain visible and reproducible.
+From the target repository:
+
+```bash
+rig config set linters.rules.groups.anti-slop true
+rig apply commit
+```
+
+Rig checks the repository-local Oxc toolchain, installs/reconciles the vendored anti-slop carrier from agent-tools, and renders the effective `oxlint.config.ts`. Inspect the resolved policy at any time:
+
+```bash
+rig lint rules
+rig lint rules anti-slop/no-known-value-widening
+rig lint rules --json
+```
+
+The same policy can be declared directly in `rig.yaml`:
+
+```yaml
+linters:
+  rules:
+    groups:
+      anti-slop: true
+    # `all: true` additionally enables applicable rules whose Default is off.
+    # Final per-rule override; this wins over defaults, groups, all, enable and disable.
+    severity:
+      anti-slop/no-module-mocking: error
+      anti-slop/no-runtime-typeof: off
+```
+
+Use the global Rig config instead when you want the same baseline on every repository, then override only exceptions in repository `rig.yaml`.
+
+### Option 2 — direct Oxc setup
+
+Use the normal package-manager/Oxlint workflow and keep the plugin as a local package dependency. For pnpm:
+
+```bash
+pnpm add -D oxlint @oxlint/plugins
+pnpm add -D oxlint-plugin-anti-slop@github:alex-mextner/anti-slop
+```
+
+Then register it in `oxlint.config.ts` and select severities explicitly:
+
+```ts
+import { defineConfig } from "oxlint";
+import antiSlop from "oxlint-plugin-anti-slop";
+
+export default defineConfig({
+  jsPlugins: [{ name: "anti-slop", specifier: "oxlint-plugin-anti-slop" }],
+  rules: {
+    "anti-slop/no-known-value-widening": "error",
+    "anti-slop/no-module-mocking": "warn",
+    "anti-slop/no-runtime-typeof": "off",
+  },
+});
+```
+
+Run it through the repository-local binary as usual:
+
+```bash
+pnpm oxlint .
+```
+
+The package is intentionally not published as a versioned npm release today; the GitHub dependency keeps the exact source revision visible in the lockfile. Rig uses its pinned agent-tools source instead.
 
 ## Rules
 
-> [!TIP]
-> Each rule links to a short guide with rationale, replacement patterns, examples, and semantic caveats. Lint diagnostics also include the guide path so a human or coding agent can jump from the error to the full rule without duplicating the whole guide in every message.
+The **Rig default policy** is the built-in JS/TS policy Rig applies when lint policy is enabled for an applicable repository. You do not install a separate “profile”: Rig resolves it automatically, then global config and `rig.yaml` may override it. `Default` below is that Rig default. `Level` is the severity when the rule is on. Rules with `Default: off` remain available and are enabled by `linters.rules.all: true`, an applicable group/profile, `enable`, or an explicit `severity` override.
 
-- [`no-chained-type-assertions`](docs/rules/no-chained-type-assertions.md) — rejects nested type assertions that fabricate evidence. **Prefer:** keep the original precise type, or parse untrusted input at its boundary before narrowing it.
-- [`no-conditional-empty-object-spread`](docs/rules/no-conditional-empty-object-spread.md) — rejects conditional spreads that use `{}` to omit fields. **Prefer:** build the object explicitly and add the property only when present.
-- [`no-known-value-widening`](docs/rules/no-known-value-widening.md) — rejects explicit broad target types that discard known value evidence. **Prefer:** preserve inference, use `satisfies`, or use a named owner contract.
-- [`no-module-mocking`](docs/rules/no-module-mocking.md) — rejects Vitest and Jest module mocks. **Prefer:** dependency injection through a real interface, service layer, adapter, or faithful test implementation.
-- [`no-multiple-function-params`](docs/rules/no-multiple-function-params.md) — rejects multi-value positional function signatures. **Prefer:** one named request/options object. This is an opt-in API-shape rule, not a universal correctness invariant.
-- [`no-object-parameters`](docs/rules/no-object-parameters.md) — rejects the broad `object` type on function inputs. **Prefer:** accept a named owner type and parse external input at the boundary.
-- [`no-optional-function-parameters`](docs/rules/no-optional-function-parameters.md) — rejects `?` on positional parameters. **Prefer:** optional fields in a named request/options object, or explicit `T | undefined` when positional semantics are required. This rule is opt-in.
-- [`no-reflect-apply`](docs/rules/no-reflect-apply.md) — rejects `Reflect.apply`. **Prefer:** typed function calls or a named interface for dynamic dispatch.
-- [`no-reflect-get`](docs/rules/no-reflect-get.md) — rejects `Reflect.get`. **Prefer:** typed property access, or parse dynamic input into a named domain type first.
-- [`no-runtime-typeof`](docs/rules/no-runtime-typeof.md) — rejects ad hoc `typeof` narrowing. **Prefer:** decode external values at the I/O boundary, then branch on domain values. This rule is intentionally suitable for opt-in/strict profiles rather than a universal default because small boundary parsers may legitimately use `typeof`.
-- [`no-shape-in-symbol-names`](docs/rules/no-shape-in-symbol-names.md) — rejects `shape` in symbol names. **Prefer:** name symbols for their domain role or ownership. This is an opinionated naming rule and is not a universal default.
-- [`no-unknown-parameters`](docs/rules/no-unknown-parameters.md) — rejects `unknown` inputs except the explicit `cause` convention. **Prefer:** accept a named domain type after the expected schema/parser has run at the boundary. Boundary adapters may reasonably keep this rule disabled or downgraded.
-- [`no-unknown-returns`](docs/rules/no-unknown-returns.md) — rejects function contracts that return `unknown` or `Promise<unknown>`. **Prefer:** parse at the boundary and return a named domain type.
-- [`no-unknown-type-aliases`](docs/rules/no-unknown-type-aliases.md) — rejects aliases that merely conceal `unknown`. **Prefer:** keep `unknown` visible at an allowed parsing boundary, then use the parsed owner type.
-- [`no-unsafe-dictionary-type`](docs/rules/no-unsafe-dictionary-type.md) — rejects dictionary value contracts based on `unknown`, `any`, `object`, `{}`, and semantic equivalents. **Prefer:** an owner/schema-derived value type and parsed external payloads.
-- [`no-widen-then-assert`](docs/rules/no-widen-then-assert.md) — rejects local flows that widen known values and later assert them back. **Prefer:** keep the precise type from initialization through use and parse boundary input once.
-- [`require-safety-comment-for-type-assertion`](docs/rules/require-safety-comment-for-type-assertion.md) — requires each non-const assertion to document its checked invariant. **Prefer:** remove the assertion when possible; otherwise state the specific `SAFETY:` invariant immediately before it.
+Direct Oxc users have no implicit Rig defaults: put the desired `"off"`, `"warn"`, or `"error"` value in `rules` themselves.
 
-## Recommended Rig baseline
+See [Policy and configuration](#policy-and-configuration) for precedence and concrete Rig/Oxc examples. Each rule name links to its detailed rationale, replacement patterns, examples, and caveats.
 
-The fork deliberately ships more rules than the default profile enables. A sensible baseline is:
+| Rule | Default | Level | Summary |
+| --- | --- | --- | --- |
+| [`no-chained-type-assertions`](docs/rules/no-chained-type-assertions.md) | on | error | Reject nested assertions that fabricate evidence; preserve the precise type or parse at the boundary. |
+| [`no-conditional-empty-object-spread`](docs/rules/no-conditional-empty-object-spread.md) | off | error | Prefer explicit conditional property construction over spreading `{}`. |
+| [`no-known-value-widening`](docs/rules/no-known-value-widening.md) | on | error | Preserve known value evidence; prefer inference, `satisfies`, or an owner contract. |
+| [`no-module-mocking`](docs/rules/no-module-mocking.md) | on | warn | Prefer dependency injection, adapters, or faithful test implementations to module mocks. |
+| [`no-multiple-function-params`](docs/rules/no-multiple-function-params.md) | off | error | Opinionated API-shape rule: prefer one named request/options object. |
+| [`no-object-parameters`](docs/rules/no-object-parameters.md) | on | error | Prefer named owner types over broad `object` inputs. |
+| [`no-optional-function-parameters`](docs/rules/no-optional-function-parameters.md) | off | error | Opinionated API-shape rule: prefer optional fields in a named request/options object. |
+| [`no-reflect-apply`](docs/rules/no-reflect-apply.md) | on | warn | Prefer typed calls or a named interface for dynamic dispatch. |
+| [`no-reflect-get`](docs/rules/no-reflect-get.md) | on | warn | Prefer typed property access or parsed domain values. |
+| [`no-runtime-typeof`](docs/rules/no-runtime-typeof.md) | off | error | Strict rule; boundary parsers can legitimately need `typeof`. |
+| [`no-shape-in-symbol-names`](docs/rules/no-shape-in-symbol-names.md) | off | error | Opinionated naming policy: name symbols for domain role/ownership. |
+| [`no-unknown-parameters`](docs/rules/no-unknown-parameters.md) | on | warn | Keep `unknown` at explicit parsing boundaries rather than interior contracts. |
+| [`no-unknown-returns`](docs/rules/no-unknown-returns.md) | on | error | Parse at the boundary and return a named domain type. |
+| [`no-unknown-type-aliases`](docs/rules/no-unknown-type-aliases.md) | on | error | Do not hide uncertainty behind aliases. |
+| [`no-unsafe-dictionary-type`](docs/rules/no-unsafe-dictionary-type.md) | on | error | Require useful/schema-derived dictionary value contracts. |
+| [`no-widen-then-assert`](docs/rules/no-widen-then-assert.md) | on | error | Reject flows that discard known evidence and later assert it back. |
+| [`require-safety-comment-for-type-assertion`](docs/rules/require-safety-comment-for-type-assertion.md) | on | error | Unavoidable assertions must state the checked invariant immediately before the assertion. |
 
-| Rule | Default | Rationale |
-| --- | --- | --- |
-| `no-chained-type-assertions` | error | catches assertion laundering |
-| `no-known-value-widening` | error | preserves known type evidence |
-| `no-widen-then-assert` | error | catches evidence loss followed by reconstruction |
-| `no-unsafe-dictionary-type` | error | rejects contracts whose values carry no useful type evidence |
-| `require-safety-comment-for-type-assertion` | error | documents unavoidable assertions |
-| `no-object-parameters` | error | keeps function contracts concrete |
-| `no-unknown-type-aliases` | error | prevents hiding uncertainty behind aliases |
-| `no-unknown-returns` | error | keeps uncertainty at boundaries |
-| `no-reflect-get` | warn | useful smell; dynamic APIs can be legitimate |
-| `no-reflect-apply` | warn | useful smell; dynamic dispatch can be legitimate |
-| `no-module-mocking` | warn | promotes real seams without making every test architecture identical |
-| `no-unknown-parameters` | warn | strong interior-code signal, but boundary adapters exist |
-| `no-runtime-typeof` | off | boundary parsers may legitimately use `typeof` |
-| `no-conditional-empty-object-spread` | off | readability/style choice rather than a correctness invariant |
-| `no-shape-in-symbol-names` | off | repository-specific naming policy |
-| `no-multiple-function-params` | off | API-shape preference with legitimate callback/low-level exceptions |
-| `no-optional-function-parameters` | off | API-shape preference with legitimate framework/external-signature exceptions |
+## Policy and configuration
 
-Projects can enable all rules and then disable/downgrade selected rules, or start from the baseline and opt into stricter groups. Rig is the source of truth for those choices.
+### Rig
+
+The effective order is: built-in defaults → applicable group/profile selection → global Rig config → repository `rig.yaml` → `all` → per-rule `enable`/`disable` → per-rule `severity` as the final authority.
+
+Examples:
+
+```yaml
+linters:
+  rules:
+    # Enable every applicable known policy concept after provider deduplication,
+    # including anti-slop rules whose Default column above is off.
+    all: true
+
+    # Individual switches are useful for small exceptions.
+    enable:
+      - anti-slop/no-runtime-typeof
+    disable:
+      - anti-slop/no-module-mocking
+
+    # Final severity overrides win over everything above.
+    severity:
+      anti-slop/no-reflect-get: error
+      anti-slop/no-shape-in-symbol-names: warn
+      anti-slop/no-optional-function-parameters: off
+```
+
+Use `rig lint rules` to see the resolved result rather than inferring it from generated files.
+
+### Direct Oxlint
+
+Oxlint has no knowledge of Rig defaults. Configure each rule with standard Oxc severity values:
+
+```ts
+export default defineConfig({
+  rules: {
+    "anti-slop/no-known-value-widening": "error",
+    "anti-slop/no-reflect-get": "warn",
+    "anti-slop/no-runtime-typeof": "off",
+  },
+});
+```
+
+### `SAFETY:` comments
+
+`require-safety-comment-for-type-assertion` uses `SAFETY:` as a focused proof attached to an assertion that TypeScript cannot establish. It is **not** a generic lint-disable comment and it does not make an unsafe assertion acceptable by itself.
+
+Bad — no evidence:
+
+```ts
+const userId = value as UserId;
+```
+
+Also bad — generic waiver:
+
+```ts
+// SAFETY: this should be fine.
+const userId = value as UserId;
+```
+
+Good — name the concrete checked invariant and where it came from:
+
+```ts
+const parsed = parseUserId(value);
+if (!parsed.ok) throw new InvalidUserIdError(value);
+
+// SAFETY: parseUserId accepted `value`; UserId is the branded representation of that validated string.
+const userId = value as UserId;
+```
+
+Prefer removing the assertion entirely when the parser/type guard can return the precise type. `as const` is exempt because it narrows a value instead of asserting an unrelated runtime contract.
 
 ## Development
 
@@ -69,7 +186,15 @@ pnpm install
 pnpm check
 ```
 
-`src/` is canonical. After changing production source, run `pnpm sync:skill-assets`; CI checks that the skill's bundled copy remains identical.
+`src/` is canonical. After changing production source or a rule guide, run `pnpm sync:skill-assets`; CI checks that the install payload remains identical.
+
+## Credits and related work
+
+- [Rig](https://github.com/alex-mextner/rig-cli) — declarative dev-environment and policy reconciler; owns applicability, rule selection, severity, and generated target configuration in Rig-managed repositories.
+- [agent-tools](https://github.com/alex-mextner/agent-tools) — reusable agent tooling catalog and pinned carrier source used by Rig; vendors anti-slop and supplies the surrounding Oxc integration.
+- [typeonce-dev/ai-automation](https://github.com/typeonce-dev/ai-automation) — upstream AI-development automation/rule collection that informed part of the rule inventory and applicability analysis. Its implementations are treated as reference material where licensing/provider selection prevents direct reuse.
+
+Thanks to the original anti-slop work this repository was forked from and to the broader Oxc/Oxlint ecosystem that makes local JavaScript lint plugins possible.
 
 ## License
 
