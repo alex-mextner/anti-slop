@@ -29,24 +29,27 @@ const userId = parseUserId(value); // returns UserId or throws
 
 ## When an assertion is genuinely necessary
 
-State the invariant immediately before the assertion or its containing statement and name the evidence that established it:
+State the invariant immediately before the assertion or its containing statement and name the evidence that established it. Branding after an external validator is a typical case when the validator's boolean result does not itself change the TypeScript type:
 
 ```ts
-const parsed = parseUserId(value);
-if (!parsed.ok) throw new InvalidUserIdError(value);
+type UserId = string & { readonly __brand: "UserId" };
 
-// SAFETY: parseUserId accepted `value`; UserId is the branded representation of that validated string.
+if (!userIdSchema.safeParse(value).success) {
+  throw new InvalidUserIdError(value);
+}
+
+// SAFETY: userIdSchema accepted `value`; UserId is the branded representation of that validated string.
 const userId = value as UserId;
 ```
 
-Library/protocol invariants are another legitimate case when the type declaration cannot encode them:
+Protocol/library invariants can also justify an assertion when their runtime guarantee is stronger than the available declaration:
 
 ```ts
-const element = document.getElementById("app");
-if (!(element instanceof HTMLDivElement)) throw new Error("#app must be a div");
+const decoded = protocol.decode(frame);
+if (!decoded.valid) throw new InvalidFrameError();
 
-// SAFETY: the instanceof check above proves this exact DOM node is an HTMLDivElement.
-const app = element as HTMLDivElement;
+// SAFETY: protocol.decode validated the payload against MessageV2; the library exposes payload as object.
+const message = decoded.payload as MessageV2;
 ```
 
 The comment should therefore identify a specific runtime check, parser/schema result, protocol guarantee, construction invariant, or library guarantee. If you cannot state such evidence precisely, the assertion is probably hiding missing validation or an imprecise upstream type.
