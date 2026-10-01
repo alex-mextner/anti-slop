@@ -15,6 +15,8 @@ tester.run(
       "// SAFETY: The parser established the UserId invariant.\nconst id = value as UserId;",
       "function parse(): UserId {\n// SAFETY: Validation above established the UserId invariant.\nreturn value as UserId;\n}",
       "const id = /* SAFETY: Validation established the invariant. */ value as UserId;",
+      "// SAFETY: The parser established the UserId invariant.\nexport const id = value as UserId;",
+      "// SAFETY: The parser established the UserId invariant.\nexport default value as UserId;",
     ],
     invalid: [
       { code: "const id = value as UserId;", errors: [error] },
@@ -22,6 +24,19 @@ tester.run(
       { code: "const id = value as UserId; // SAFETY: Too late.", errors: [error] },
       {
         code: "// This cast seems fine.\nconst id = value as UserId;",
+        errors: [error],
+      },
+      { code: "export const id = value as UserId;", errors: [error] },
+      {
+        code: "// SAFETY: Justifies only the first export.\nexport const first = 1;\nexport const id = value as UserId;",
+        errors: [error],
+      },
+      {
+        code: "export const id = value as UserId; // SAFETY: Too late.",
+        errors: [error],
+      },
+      {
+        code: "// SAFETY: Justifies only the namespace declaration.\nnamespace Ids {\nexport const id = value as UserId;\n}",
         errors: [error],
       },
     ],
